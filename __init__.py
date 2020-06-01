@@ -63,7 +63,7 @@ class TwitchSkill(Skill):
     async def stream_started(self, event):
         _LOGGER.info("Stream started event received on skill!")
         await self.connector.send(Message(f"Hello everybody! Stream just started, today we are going to be working on {event.title}"))
-        await self.twitter_connector.send(f"I'm live on Twitch, today on stream I am going to be working on - '{event.title}', come say hello! https://twitch.tv/theflyingdev")
+        await self.twitter_connector.send(Message(f"I'm live on Twitch, today we are going to be working on - '{event.title}', come say hello! https://twitch.tv/theflyingdev"))
 
     @match_event(UserFollowed)
     async def user_followed(self, event):
@@ -87,7 +87,7 @@ class TwitchSkill(Skill):
         _LOGGER.debug(f"{event.user} joined the chat \n")
         user = await self.opsdroid.memory.get("talked")
         
-        if user:
+        if user and user not in self.config.get("blacklisted-users", []):
             text = random.choice(
                 [
                     f"Welcome back to the stream {event.user}!",
@@ -101,13 +101,13 @@ class TwitchSkill(Skill):
 
     @match_regex(r'\!set today (.*)')
     @constrain_users(['theflyingdev', 'fabiorosado', 'FabioRosado'])
-    async def change_title(self, message):
+    async def set_today(self, message):
         _LOGGER.info("Setting today command")
         _LOGGER.info(message.regex.group(1))
-        await self.opsdroid.memory.put("today", message.group(1))
+        await self.opsdroid.memory.put("today", message.regex.group(1))
 
     @match_regex(r'!today|working today|doing today')
     async def today_command(self, message):
         today = await self.opsdroid.memory.get("today")
         
-        await self.connector.send(Message(today))
+        await self.connector.send(Message(today.encode('utf-8')))
